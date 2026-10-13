@@ -1,0 +1,6 @@
+---
+# compiles /etc/dconf/db/local.d/* into /etc/dconf/db/local; an invalid GVariant value fails with rc 1 and
+# names file, key and value
+- name: gnome dconf update
+  ansible.builtin.command: dconf update
+  changed_when: true

@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# dconf system defaults (ansible-role-gnome), compiled by `dconf update` into /etc/dconf/db/local
+{% for section, keys in gnome_final.settings | dictsort %}
+
+[{{ section }}]
+{% for key, value in keys | dictsort %}
+{{ key }}={{ (value | string | lower) if value is boolean else value }}
+{% endfor %}
+{% endfor %}

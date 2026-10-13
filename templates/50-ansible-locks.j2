@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+# dconf locks (ansible-role-gnome): users can't change these keys
+{% for lock in gnome_final.locks %}
+{{ lock }}
+{% endfor %}

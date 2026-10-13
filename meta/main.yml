@@ -1,0 +1,11 @@
+galaxy_info:
+  author: hoonetorg
+  description: GNOME settings for all users (dconf system defaults and locks) from the inventory
+  license: Apache-2.0
+  min_ansible_version: "2.15"
+  platforms:
+    - name: opensuse
+      versions: [all]
+  galaxy_tags: [gnome, dconf, desktop, keyboard]
+
+dependencies: []

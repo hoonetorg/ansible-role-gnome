@@ -1,0 +1,6 @@
+---
+# dconf profile of all users: own db first (user-db), then the system db (system-db:local)
+gnome_profile: /etc/dconf/profile/user
+gnome_db_dir: /etc/dconf/db/local.d
+gnome_keyfile: /etc/dconf/db/local.d/50-ansible
+gnome_lockfile: /etc/dconf/db/local.d/locks/50-ansible

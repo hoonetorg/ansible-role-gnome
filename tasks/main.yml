@@ -1,0 +1,103 @@
+---
+- name: Build final gnome configuration
+  ansible.builtin.set_fact:
+    gnome_final: "{{ gnome_defaults | combine(gnome | default({}), recursive=True) }}"
+
+- name: Only openSUSE is supported
+  ansible.builtin.assert:
+    that: ansible_facts['os_family'] == 'Suse'
+    fail_msg: "gnome: only openSUSE is implemented, not {{ ansible_facts['distribution'] }}"
+    quiet: true
+
+- name: Assert settings paths (no leading/trailing slash, keys with values)
+  ansible.builtin.assert:
+    that:
+      - item.key is not match('/')
+      - item.key is not search('/$')
+      - item.value is mapping
+      - item.value | length > 0
+    fail_msg: "gnome: settings path '{{ item.key }}' must look like org/gnome/desktop/input-sources and have keys"
+    quiet: true
+  loop: "{{ gnome_final.settings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Assert lock paths (full key path)
+  ansible.builtin.assert:
+    that:
+      - item is string
+      - item is match('/')
+      - item is not search('/$')
+    fail_msg: "gnome: lock '{{ item }}' must be a full key path like /org/gnome/desktop/input-sources/sources"
+    quiet: true
+  loop: "{{ gnome_final.locks }}"
+
+- name: GNOME system settings
+  when: gnome_final.settings | length > 0 or gnome_final.locks | length > 0
+  block:
+    - name: Install dconf
+      ansible.builtin.package:
+        name: "{{ gnome_final.packages }}"
+        state: present
+
+    - name: dconf profile of all users (own db, then system db local)
+      ansible.builtin.copy:
+        content: |
+          user-db:user
+          system-db:local
+        dest: "{{ gnome_profile }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: gnome dconf update
+
+    - name: dconf system db directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - "{{ gnome_db_dir }}"
+        - "{{ gnome_lockfile | dirname }}"
+
+    - name: dconf system defaults
+      ansible.builtin.template:
+        src: 50-ansible.j2
+        dest: "{{ gnome_keyfile }}"
+        owner: root
+        group: root
+        mode: "0644"
+        # compile the new file alone in a temporary directory (removed afterwards): an invalid GVariant value
+        # stops the run before the file is replaced
+        validate: >-
+          /bin/sh -c 'd=$(mktemp -d) && mkdir "$d/k" && cp "$1" "$d/k/50-ansible" && dconf compile "$d/db" "$d/k";
+          rc=$?; rm -rf "$d"; exit $rc' sh %s
+      when: gnome_final.settings | length > 0
+      notify: gnome dconf update
+
+    - name: dconf locks
+      ansible.builtin.template:
+        src: 50-ansible-locks.j2
+        dest: "{{ gnome_lockfile }}"
+        owner: root
+        group: root
+        mode: "0644"
+      when: gnome_final.locks | length > 0
+      notify: gnome dconf update
+
+# desired state: no settings / no locks → the role's files are removed (the profile stays, harmless)
+- name: Remove dconf system defaults
+  ansible.builtin.file:
+    path: "{{ gnome_keyfile }}"
+    state: absent
+  when: gnome_final.settings | length == 0
+  notify: gnome dconf update
+
+- name: Remove dconf locks
+  ansible.builtin.file:
+    path: "{{ gnome_lockfile }}"
+    state: absent
+  when: gnome_final.locks | length == 0
+  notify: gnome dconf update

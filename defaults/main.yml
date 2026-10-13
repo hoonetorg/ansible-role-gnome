@@ -1,0 +1,11 @@
+---
+# Merged (recursively) with the inventory variable `gnome` into `gnome_final`.
+gnome_defaults:
+  # system-wide defaults for all users (dconf system db "local"): dconf path (no leading/trailing slash) →
+  # key → GVariant value; strings need inner quotes ("'de'"), lists e.g. "[('xkb', 'us'), ('xkb', 'de')]",
+  # booleans and numbers as is; a user's own stored value wins unless the key is locked
+  settings: {}
+  # keys users can't change (full key path, e.g. /org/gnome/desktop/input-sources/sources); the system value
+  # also beats values users stored before
+  locks: []
+  packages: [dconf]
