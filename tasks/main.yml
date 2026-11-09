@@ -12,6 +12,7 @@
 - name: Assert settings paths (no leading/trailing slash, keys with values)
   ansible.builtin.assert:
     that:
+      - item.key is search('/')
       - item.key is not match('/')
       - item.key is not search('/$')
       - item.value is mapping
@@ -19,6 +20,18 @@
     fail_msg: "gnome: settings path '{{ item.key }}' must look like org/gnome/desktop/input-sources and have keys"
     quiet: true
   loop: "{{ gnome_final.settings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Assert default apps (MIME type → desktop file id)
+  ansible.builtin.assert:
+    that:
+      - item.key is match('^[A-Za-z0-9][-A-Za-z0-9.+_]*/[-A-Za-z0-9.+_]+$')
+      - item.value is string
+      - item.value is match('^[A-Za-z0-9][-A-Za-z0-9._]*\.desktop$')
+    fail_msg: "gnome: default_apps entry '{{ item.key }}' must look like application/pdf: org.gnome.Evince.desktop"
+    quiet: true
+  loop: "{{ gnome_final.default_apps | dict2items }}"
   loop_control:
     label: "{{ item.key }}"
 
@@ -87,7 +100,24 @@
       when: gnome_final.locks | length > 0
       notify: gnome dconf update
 
-# desired state: no settings / no locks → the role's files are removed (the profile stays, harmless)
+# GIO rereads the file when it changes: no logout needed
+- name: Default applications in GNOME sessions
+  ansible.builtin.template:
+    src: gnome-mimeapps.list.j2
+    dest: "{{ gnome_mimeapps }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: gnome_final.default_apps | length > 0
+
+# desired state: no settings / no locks / no default apps → the role's files are removed (the profile stays,
+# harmless)
+- name: Remove default applications
+  ansible.builtin.file:
+    path: "{{ gnome_mimeapps }}"
+    state: absent
+  when: gnome_final.default_apps | length == 0
+
 - name: Remove dconf system defaults
   ansible.builtin.file:
     path: "{{ gnome_keyfile }}"

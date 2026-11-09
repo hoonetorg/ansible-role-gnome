@@ -8,4 +8,8 @@ gnome_defaults:
   # keys users can't change (full key path, e.g. /org/gnome/desktop/input-sources/sources); the system value
   # also beats values users stored before
   locks: []
+  # default applications in GNOME sessions (GNOME and GNOME Classic, /etc/xdg/gnome-mimeapps.list): MIME type →
+  # desktop file id, e.g. application/pdf: org.gnome.Evince.desktop; beats the distribution's list, a user's own
+  # choice ("Open With" → set as default, ~/.config/mimeapps.list) wins
+  default_apps: {}
   packages: [dconf]

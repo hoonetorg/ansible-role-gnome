@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+# default applications in GNOME sessions (ansible-role-gnome); a user's ~/.config/mimeapps.list wins
+[Default Applications]
+{% for mime, app in gnome_final.default_apps | dictsort %}
+{{ mime }}={{ app }}
+{% endfor %}
