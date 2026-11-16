@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# GSettings schema overrides (ansible-role-gnome), compiled by `glib-compile-schemas`
+{% for schema, keys in gnome_final.schema_overrides | dictsort %}
+
+[{{ schema }}]
+{% for key, value in keys | dictsort %}
+{{ key }}={{ (value | string | lower) if value is boolean else value }}
+{% endfor %}
+{% endfor %}
