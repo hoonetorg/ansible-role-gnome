@@ -4,3 +4,7 @@
 - name: gnome dconf update
   ansible.builtin.command: dconf update
   changed_when: true
+
+- name: gnome compile schemas
+  ansible.builtin.command: glib-compile-schemas {{ gnome_schema_dir }}
+  changed_when: true

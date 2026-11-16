@@ -12,4 +12,7 @@ gnome_defaults:
   # desktop file id, e.g. application/pdf: org.gnome.Evince.desktop; beats the distribution's list, a user's own
   # choice ("Open With" → set as default, ~/.config/mimeapps.list) wins
   default_apps: {}
+  # new default of a GSettings key for all users, whatever its path (needed where the path differs per user,
+  # e.g. Ptyxis profiles): schema id → key → GVariant value; a user's own stored value wins
+  schema_overrides: {}
   packages: [dconf]

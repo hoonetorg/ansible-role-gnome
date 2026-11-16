@@ -11,8 +11,10 @@ applications. A new setting is inventory data, no role code.
 4. writes `/etc/dconf/db/local.d/locks/50-ansible` from `locks`
 5. on changes: `dconf update` (compiles `/etc/dconf/db/local`)
 6. writes `/etc/xdg/gnome-mimeapps.list` from `default_apps` (only this role writes it)
+7. writes `/usr/share/glib-2.0/schemas/90_ansible.gschema.override` from `schema_overrides` (the schema must be
+   installed; checked with `glib-compile-schemas --strict --dry-run` first), then `glib-compile-schemas`
 
-Without `settings` / `locks` / `default_apps` the role removes its own files again (desired state); the profile
+Without `settings` / `locks` / `default_apps` / `schema_overrides` the role removes its own files again (desired state); the profile
 stays (harmless). Users see changed settings after logging in again, changed default applications at once.
 
 **Default or lock:** a setting alone is only the default - a user who already stored their own value (GNOME
@@ -24,6 +26,11 @@ for those users, and users can't change it.
 ones (Leap 16.1: PDF → LibreOffice Draw). `/etc/xdg/gnome-mimeapps.list` beats it in GNOME and GNOME Classic
 sessions (XDG mimeapps spec, desktop-specific file). Only a default: a user's own choice ("Open With…" → set as
 default, stored in `~/.config/mimeapps.list`) wins. Other desktops are not affected.
+
+**Schema overrides:** `settings` needs a fixed dconf path. Some applications store settings under a path that
+differs per user (Ptyxis: `/org/gnome/Ptyxis/Profiles/<random id>/`); `schema_overrides` changes the default of
+the key itself, for every path. Only a default: a user's own stored value wins. Applies when the application
+is started again.
 
 Only openSUSE is implemented. Per-user settings (`community.general.dconf`) are not implemented yet.
 
@@ -41,6 +48,9 @@ gnome:
     - /org/gnome/desktop/input-sources/sources
   default_apps:                      # MIME type → desktop file id (/usr/share/applications/<id>)
     application/pdf: org.gnome.Evince.desktop
+  schema_overrides:                  # schema id → key → value (GVariant)
+    org.gnome.Ptyxis.Profile:
+      limit-scrollback: false        # unlimited scrollback in every Ptyxis profile
 ```
 
 Find MIME types and applications: `gio info -a standard::content-type <file>`, `gio mime <type>` (in the GNOME

@@ -45,6 +45,18 @@
     quiet: true
   loop: "{{ gnome_final.locks }}"
 
+- name: Assert schema overrides (schema id → keys with values)
+  ansible.builtin.assert:
+    that:
+      - item.key is match('^[A-Za-z][-A-Za-z0-9.]*$')
+      - item.value is mapping
+      - item.value | length > 0
+    fail_msg: "gnome: schema_overrides entry '{{ item.key }}' must look like org.gnome.Ptyxis.Profile and have keys"
+    quiet: true
+  loop: "{{ gnome_final.schema_overrides | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
 - name: GNOME system settings
   when: gnome_final.settings | length > 0 or gnome_final.locks | length > 0
   block:
@@ -100,6 +112,36 @@
       when: gnome_final.locks | length > 0
       notify: gnome dconf update
 
+- name: List installed GSettings schemas
+  ansible.builtin.shell: gsettings list-schemas; gsettings list-relocatable-schemas
+  register: gnome_schemas
+  changed_when: false
+  check_mode: false
+  when: gnome_final.schema_overrides | length > 0
+
+# the schema compiler ignores an override for an unknown schema without a word
+- name: Schemas of schema_overrides must be installed
+  ansible.builtin.assert:
+    that: item in gnome_schemas.stdout_lines
+    fail_msg: "gnome: schema_overrides: schema '{{ item }}' is not installed"
+    quiet: true
+  loop: "{{ gnome_final.schema_overrides.keys() | list }}"
+
+# the new file is compiled with the installed schemas in a temporary directory (removed afterwards): an unknown
+# key or an invalid value stops the run before the file is replaced
+- name: GSettings schema overrides
+  ansible.builtin.template:
+    src: 90_ansible.gschema.override.j2
+    dest: "{{ gnome_schema_override }}"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: >-
+      /bin/sh -c 'd=$(mktemp -d) && cp {{ gnome_schema_dir }}/*.xml "$d" && cp "$1" "$d/90_ansible.gschema.override"
+      && glib-compile-schemas --strict --dry-run "$d"; rc=$?; rm -rf "$d"; exit $rc' sh %s
+  when: gnome_final.schema_overrides | length > 0
+  notify: gnome compile schemas
+
 # GIO rereads the file when it changes: no logout needed
 - name: Default applications in GNOME sessions
   ansible.builtin.template:
@@ -110,7 +152,7 @@
     mode: "0644"
   when: gnome_final.default_apps | length > 0
 
-# desired state: no settings / no locks / no default apps → the role's files are removed (the profile stays,
+# desired state: no settings / no locks / no default apps / no schema overrides → the role's files are removed (the profile stays,
 # harmless)
 - name: Remove default applications
   ansible.builtin.file:
@@ -131,3 +173,10 @@
     state: absent
   when: gnome_final.locks | length == 0
   notify: gnome dconf update
+
+- name: Remove GSettings schema overrides
+  ansible.builtin.file:
+    path: "{{ gnome_schema_override }}"
+    state: absent
+  when: gnome_final.schema_overrides | length == 0
+  notify: gnome compile schemas

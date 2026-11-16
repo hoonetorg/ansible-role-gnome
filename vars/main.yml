@@ -5,3 +5,5 @@ gnome_db_dir: /etc/dconf/db/local.d
 gnome_keyfile: /etc/dconf/db/local.d/50-ansible
 gnome_lockfile: /etc/dconf/db/local.d/locks/50-ansible
 gnome_mimeapps: /etc/xdg/gnome-mimeapps.list
+gnome_schema_dir: /usr/share/glib-2.0/schemas
+gnome_schema_override: /usr/share/glib-2.0/schemas/90_ansible.gschema.override
